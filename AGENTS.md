@@ -10,7 +10,7 @@
 
 ## OVERVIEW
 
-mWorld 当前处于项目骨架初始化阶段。
+mWorld 项目骨架已完成初始化，当前进入 Admin 瓦片地图编辑器 POC 阶段。
 
 本仓库采用：
 
@@ -18,7 +18,7 @@ mWorld 当前处于项目骨架初始化阶段。
 - `apps/portal`：Portal 玩家运行时前端应用。
 - `backend`：单一 Go 后端模块，使用 Go + chi，并按 DDD 领域驱动设计组织边界。
 
-当前阶段只定义目录边界，不预设具体业务上下文，不迁移旧项目业务实现。
+当前阶段允许在 `apps/admin` 内实现瓦片地图编辑器前端 POC。后端仍不预设具体业务上下文，不迁移旧项目业务实现。
 
 ---
 
@@ -324,18 +324,22 @@ packages/
 当前阶段目标：
 
 ```text
-1. 确认目录骨架。
-2. 初始化目录。
-3. 初始化根目录 AGENTS.md。
+1. 在 apps/admin 初始化 React + TypeScript 前端应用。
+2. 使用 Leafer.js 实现 Admin 瓦片地图编辑器画布 POC。
+3. 产出独立地图文档模型，并提供 Phaser/Tiled JSON 导出能力。
 ```
 
 当前阶段约束：
 
-- 不创建业务代码文件。
+- 瓦片地图编辑器代码只放在 `apps/admin/src/features/tile-map-editor`。
+- Leafer.js 只作为 Admin 编辑器画布层，不进入 `apps/portal`。
+- 地图文档模型不得绑定 Leafer 节点结构，Portal 后续通过导出数据渲染。
+- 第一阶段只支持正交瓦片地图和前端本地状态。
+- 可以在 `apps/admin` 引入 React、TypeScript、Vite、Leafer.js 等前端依赖。
 - 不创建具体业务上下文目录。
 - 不初始化旧项目业务结构。
 - 不从旧项目复制实现代码。
-- 不引入 Go/npm 依赖。
+- 不修改后端持久化或创建后端业务模块。
 
 ---
 
