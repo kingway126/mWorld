@@ -39,7 +39,7 @@ export function InspectorTabs({
       <div className="panel-header">
         <div>
           <h2>Inspector</h2>
-          <span>Document properties</span>
+          <span>Layers, map data, export state</span>
         </div>
       </div>
 

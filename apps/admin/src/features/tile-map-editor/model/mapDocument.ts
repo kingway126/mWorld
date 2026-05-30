@@ -47,8 +47,8 @@ export const sampleTileset: TilesetRef = {
   columns: 4,
   tileCount: 8,
   tiles: [
-    { localId: 0, name: "Grass", color: "#70b865" },
-    { localId: 1, name: "Dark Grass", color: "#4f9651" },
+    { localId: 0, name: "Blue Slate", color: "#6f87b8" },
+    { localId: 1, name: "Deep Slate", color: "#4f638f" },
     { localId: 2, name: "Dirt", color: "#b98a55" },
     { localId: 3, name: "Stone", color: "#8a97a5" },
     { localId: 4, name: "Water", color: "#3c8fd8" },

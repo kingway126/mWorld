@@ -22,9 +22,10 @@ export function TopAppBar({
     <header className="top-app-bar">
       <div className="top-app-identity">
         <div className="product-mark" aria-hidden="true">
-          mW
+          mw
         </div>
         <div className="document-title-block">
+          <span className="workspace-label">mWorld Studio</span>
           <h1>{mapDocument.name}</h1>
           <div className="document-meta">
             <span>Orthogonal</span>
@@ -65,7 +66,7 @@ export function TopAppBar({
         </div>
         <button className="export-button" type="button" onClick={onExport}>
           <Download aria-hidden="true" size={16} />
-          Export
+          Export JSON
         </button>
       </div>
     </header>

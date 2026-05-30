@@ -49,7 +49,7 @@ export function AssetBrowserPanel({
       <div className="panel-header">
         <div>
           <h2>Assets</h2>
-          <span>Tileset library</span>
+          <span>Tileset library / {tilesets[0]?.tileCount ?? 0} tiles</span>
         </div>
       </div>
 
@@ -92,6 +92,9 @@ export function AssetBrowserPanel({
               );
             })}
           </div>
+          {tileset.tiles.length === 0 && (
+            <div className="asset-empty-state">No tiles found</div>
+          )}
         </section>
       ))}
 
@@ -101,6 +104,7 @@ export function AssetBrowserPanel({
           style={{ backgroundColor: selectedTile?.color ?? "transparent" }}
         />
         <div>
+          <span className="selected-asset-label">Selected tile</span>
           <strong>{selectedTile?.name ?? "Empty"}</strong>
           <span>
             {selectedTile ? `${selectedTile.tileset} / GID ${selectedTile.gid}` : "No tile"}

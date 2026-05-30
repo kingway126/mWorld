@@ -18,7 +18,7 @@ export function ToolOptionsBar({ activeTool, viewport }: ToolOptionsBarProps) {
   return (
     <div className="tool-options-bar">
       <div className="option-section option-section-primary">
-        <span className="option-label">Tool</span>
+        <span className="option-label">Mode</span>
         <strong>{toolLabels[activeTool]}</strong>
       </div>
 
