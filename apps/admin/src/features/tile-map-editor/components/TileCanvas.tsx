@@ -117,7 +117,7 @@ export function TileCanvas({
     }
 
     renderTileLayers(stage, mapDocument);
-  }, [mapDocument, stageReady]);
+  }, [mapDocument.layers, mapDocument.size, mapDocument.tileSize, mapDocument.tilesets, stageReady]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -126,7 +126,14 @@ export function TileCanvas({
     }
 
     renderSelection(stage, mapDocument, hoverCell, selectedGid);
-  }, [hoverCell, mapDocument, selectedGid, stageReady]);
+  }, [
+    hoverCell,
+    mapDocument.size,
+    mapDocument.tileSize,
+    mapDocument.tilesets,
+    selectedGid,
+    stageReady,
+  ]);
 
   useEffect(() => {
     const stage = stageRef.current;
