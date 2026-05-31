@@ -86,8 +86,8 @@ describe("paintTerrain", () => {
       throw new Error("Expected ground tile layer");
     }
 
-    expect(ground.data[tileIndex({ column: 4, row: 4 }, painted.size)]).toBe(271);
-    expect(ground.data[tileIndex({ column: 5, row: 4 }, painted.size)]).toBe(292);
+    expect(ground.data[tileIndex({ column: 4, row: 4 }, painted.size)]).toBe(292);
+    expect(ground.data[tileIndex({ column: 5, row: 4 }, painted.size)]).toBe(293);
   });
 
   it("writes details-layer edge tiles for rim terrain", () => {
@@ -104,9 +104,9 @@ describe("paintTerrain", () => {
     const grassIndex = tileIndex({ column: 8, row: 8 }, painted.size);
     const rimIndex = tileIndex({ column: 9, row: 8 }, painted.size);
     expect(ground.data[grassIndex]).toBe(271);
-    expect(details.data[grassIndex]).toBe(0);
+    expect(details.data[grassIndex]).toBe(308);
     expect(ground.data[rimIndex]).toBe(0);
-    expect(details.data[rimIndex]).toBe(308);
+    expect(details.data[rimIndex]).toBe(309);
   });
 
   it("paints field base without implicitly drawing the rim terrain", () => {
@@ -120,8 +120,10 @@ describe("paintTerrain", () => {
       throw new Error("Expected ground and details tile layers");
     }
 
+    const grassIndex = tileIndex({ column: 8, row: 8 }, painted.size);
     const fieldIndex = tileIndex({ column: 9, row: 8 }, painted.size);
-    expect(ground.data[fieldIndex]).toBe(324);
+    expect(ground.data[grassIndex]).toBe(324);
+    expect(ground.data[fieldIndex]).toBe(325);
     expect(details.data[fieldIndex]).toBe(0);
   });
 
@@ -205,8 +207,8 @@ describe("paintTerrain", () => {
     const waterIndex = tileIndex({ column: 5, row: 4 }, water.size);
     expect(water.editor.missingTransitionCells[sandIndex]).toBeUndefined();
     expect(water.editor.missingTransitionCells[waterIndex]).toBeUndefined();
-    expect(ground.data[sandIndex]).toBe(277);
-    expect(ground.data[waterIndex]).toBe(340);
+    expect(ground.data[sandIndex]).toBe(340);
+    expect(ground.data[waterIndex]).toBe(293);
   });
 
   it("marks cells with no available transition tileset", () => {
@@ -222,18 +224,18 @@ describe("paintTerrain", () => {
     const waterIndex = tileIndex({ column: 4, row: 4 }, field.size);
     const fieldIndex = tileIndex({ column: 5, row: 4 }, field.size);
     expect(field.editor.missingTransitionCells[waterIndex]).toBe("field|water");
-    expect(field.editor.missingTransitionCells[fieldIndex]).toBe("field|water");
+    expect(field.editor.missingTransitionCells[fieldIndex]).toBeUndefined();
     expect(ground.data[waterIndex]).toBe(0);
-    expect(ground.data[fieldIndex]).toBe(0);
+    expect(ground.data[fieldIndex]).toBe(325);
   });
 
-  it("keeps a grass strip clean when different upper materials are painted beside it", () => {
+  it("keeps a last-painted grass strip clean when different upper materials are painted beside it", () => {
     let document = createSampleMapDocument();
 
     for (let row = 6; row <= 10; row += 1) {
-      document = paintTerrain(document, { column: 8, row }, "grass");
       document = paintTerrain(document, { column: 7, row }, "sand");
       document = paintTerrain(document, { column: 9, row }, "water");
+      document = paintTerrain(document, { column: 8, row }, "grass");
     }
 
     const ground = document.layers.find((layer) => layer.id === "ground");
@@ -252,6 +254,46 @@ describe("paintTerrain", () => {
         271,
       );
     }
+  });
+
+  it("resolves stepped water corners from terrain vertices", () => {
+    let document = createSampleMapDocument();
+
+    for (let row = 4; row <= 10; row += 1) {
+      for (let column = 4; column <= 12; column += 1) {
+        document = paintTerrain(document, { column, row }, "grass");
+      }
+    }
+
+    for (const cell of [
+      { column: 6, row: 5 },
+      { column: 7, row: 5 },
+      { column: 8, row: 5 },
+      { column: 5, row: 6 },
+      { column: 6, row: 6 },
+      { column: 7, row: 6 },
+      { column: 8, row: 6 },
+      { column: 9, row: 6 },
+      { column: 5, row: 7 },
+      { column: 6, row: 7 },
+    ]) {
+      document = paintTerrain(document, cell, "water");
+    }
+
+    const ground = document.layers.find((layer) => layer.id === "ground");
+    if (!ground || ground.type !== "tile") {
+      throw new Error("Expected ground tile layer");
+    }
+
+    expect(ground.data[tileIndex({ column: 7, row: 6 }, document.size)]).toBe(
+      293,
+    );
+    expect(ground.data[tileIndex({ column: 8, row: 7 }, document.size)]).toBe(
+      284,
+    );
+    expect(ground.data[tileIndex({ column: 4, row: 5 }, document.size)]).toBe(
+      288,
+    );
   });
 
   it("paints a visible square brush area and clips it at map edges", () => {

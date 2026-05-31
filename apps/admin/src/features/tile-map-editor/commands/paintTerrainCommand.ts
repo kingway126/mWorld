@@ -19,6 +19,7 @@ interface VertexCoordinate {
 }
 
 interface CellRenderPlan {
+  fillMaterial?: string;
   transition?: TerrainTransitionDefinition;
   corners?: WangCornerMaterials;
   missingKey?: string;
@@ -109,30 +110,46 @@ function updateTerrainCells(
   material: string,
 ) {
   const terrainCells = [...document.editor.terrainCells];
+  const terrainVertices = [...document.editor.terrainVertices];
   const changedCells: GridCoordinate[] = [];
+  const changedVertices: VertexCoordinate[] = [];
 
   for (const cell of cells) {
     const index = tileIndex(cell, document.size);
-    if (terrainCells[index] === material) {
-      continue;
+    if (terrainCells[index] !== material) {
+      terrainCells[index] = material;
+      changedCells.push(cell);
     }
 
-    terrainCells[index] = material;
-    changedCells.push(cell);
-  }
+    for (const vertex of cellVertices(cell, document.size)) {
+      const index = vertexIndex(vertex, document.size);
+      if (terrainVertices[index] === material) {
+        continue;
+      }
 
-  const refreshCells =
-    changedCells.length > 0
-      ? cellsAffectedByCells(changedCells, document.size)
-      : cells.filter((cell) =>
-          shouldRefreshUnchangedTerrainCell(document, cell, material),
-        );
-
-  if (refreshCells.length === 0) {
-    return document;
+      terrainVertices[index] = material;
+      changedVertices.push(vertex);
+    }
   }
 
   const ownedLayerIds = terrainOwnedLayerIds(document);
+  const refreshCells =
+    changedVertices.length > 0
+      ? cellsAffectedByVertices(changedVertices, document.size)
+      : changedCells.length > 0
+        ? cellsAffectedByCells(changedCells, document.size)
+      : cells.filter((cell) =>
+          shouldRefreshUnchangedTerrainCell(document, cell, ownedLayerIds),
+        );
+
+  if (
+    refreshCells.length === 0 &&
+    changedCells.length === 0 &&
+    changedVertices.length === 0
+  ) {
+    return document;
+  }
+
   const layers = document.layers.map((layer) =>
     layer.type === "tile" && ownedLayerIds.has(layer.id)
       ? { ...layer, data: [...layer.data] }
@@ -144,6 +161,7 @@ function updateTerrainCells(
     editor: {
       ...document.editor,
       terrainCells,
+      terrainVertices,
       missingTransitionCells: [...document.editor.missingTransitionCells],
     },
   };
@@ -161,8 +179,7 @@ function refreshTerrainCell(
   ownedLayerIds: Set<string>,
 ) {
   const index = tileIndex(cell, document.size);
-  const materialId = terrainCellAt(document, cell);
-  const plan = resolveCellRenderPlan(document, cell, materialId);
+  const plan = resolveCellRenderPlan(document, cell);
 
   clearTerrainOwnedLayers(document, index, ownedLayerIds);
   document.editor.missingTransitionCells[index] = undefined;
@@ -172,18 +189,22 @@ function refreshTerrainCell(
     return;
   }
 
-  if (isEmptyTerrain(document, materialId)) {
-    return;
-  }
-
   if (!plan.transition || !plan.corners) {
-    const fill = materialId
-      ? resolveTerrainMaterialFill(document, materialId)
+    const fill = plan.fillMaterial
+      ? resolveTerrainMaterialFill(document, plan.fillMaterial)
       : undefined;
     if (fill) {
       fill.layer.data[index] = fill.gid;
     }
     return;
+  }
+
+  const lowerFill = resolveTerrainMaterialFill(
+    document,
+    plan.transition.lowerTerrain,
+  );
+  if (lowerFill && lowerFill.layer.id !== plan.transition.targetLayerId) {
+    lowerFill.layer.data[index] = lowerFill.gid;
   }
 
   const baseLayer = findMutableTileLayer(document, plan.transition.targetLayerId);
@@ -211,20 +232,15 @@ function refreshTerrainCell(
 function shouldRefreshUnchangedTerrainCell(
   document: MapDocument,
   cell: GridCoordinate,
-  material: string,
+  ownedLayerIds: Set<string>,
 ) {
   const index = tileIndex(cell, document.size);
-  const materialAtCell = terrainCellAt(document, cell);
 
   if (document.editor.missingTransitionCells[index]) {
     return true;
   }
 
-  if (materialAtCell !== material) {
-    return false;
-  }
-
-  const plan = resolveCellRenderPlan(document, cell, materialAtCell);
+  const plan = resolveCellRenderPlan(document, cell);
   if (plan.missingKey) {
     return true;
   }
@@ -262,83 +278,58 @@ function shouldRefreshUnchangedTerrainCell(
     return false;
   }
 
-  const fill = resolveTerrainMaterialFill(document, materialAtCell);
-  return Boolean(fill && fill.layer.data[index] !== fill.gid);
+  if (plan.fillMaterial) {
+    const fill = resolveTerrainMaterialFill(document, plan.fillMaterial);
+    return Boolean(fill && fill.layer.data[index] !== fill.gid);
+  }
+
+  return hasTerrainOwnedLayerData(document, index, ownedLayerIds);
 }
 
 function resolveCellRenderPlan(
   document: MapDocument,
   cell: GridCoordinate,
-  material: string,
 ): CellRenderPlan {
-  if (isEmptyTerrain(document, material)) {
+  const corners = terrainCorners(document, cell);
+  const cornerMaterials = [corners.nw, corners.ne, corners.sw, corners.se];
+
+  if (cornerMaterials.some((corner) => isEmptyTerrain(document, corner))) {
+    const uniqueNonEmptyMaterials = [
+      ...new Set(
+        cornerMaterials.filter((corner) => !isEmptyTerrain(document, corner)),
+      ),
+    ];
+
+    if (
+      uniqueNonEmptyMaterials.length === 1 &&
+      allCornersAre(corners, uniqueNonEmptyMaterials[0])
+    ) {
+      return { fillMaterial: uniqueNonEmptyMaterials[0] };
+    }
+
     return {};
   }
 
-  const neighbors = cardinalNeighborMaterials(document, cell).filter(
-    (neighbor) => !isEmptyTerrain(document, neighbor) && neighbor !== material,
-  );
-  const directNeighborMaterials = [...new Set(neighbors)];
-  const missingNeighbor = directNeighborMaterials.find(
-    (neighbor) =>
-      !findTerrainTransitionForPair(
-        document.terrainTransitions,
-        material,
-        neighbor,
-      ),
-  );
-  if (missingNeighbor) {
-    return { missingKey: terrainPairKey(material, missingNeighbor) };
+  const uniqueMaterials = [...new Set(cornerMaterials)];
+
+  if (uniqueMaterials.length === 1) {
+    return { fillMaterial: uniqueMaterials[0] };
   }
 
-  const renderableTransitions = directNeighborMaterials
-    .map((neighbor) =>
-      findTerrainTransitionForPair(
-        document.terrainTransitions,
-        material,
-        neighbor,
-      ),
-    )
-    .filter((transition): transition is TerrainTransitionDefinition => {
-      if (!transition) {
-        return false;
-      }
-
-      return transition.upperTerrain === material;
-    });
-  const uniqueTransitions: TerrainTransitionDefinition[] = [
-    ...new Map<string, TerrainTransitionDefinition>(
-      renderableTransitions.map((transition) => [transition.id, transition]),
-    ).values(),
-  ];
-
-  if (uniqueTransitions.length > 1) {
-    return {
-      missingKey: [...new Set([material, ...directNeighborMaterials])]
-        .sort()
-        .join("|"),
-    };
+  if (uniqueMaterials.length > 2) {
+    return { missingKey: uniqueMaterials.sort().join("|") };
   }
 
-  const transition = uniqueTransitions[0];
+  const transition = findTerrainTransitionForPair(
+    document.terrainTransitions,
+    uniqueMaterials[0],
+    uniqueMaterials[1],
+  );
   if (!transition) {
-    return {};
+    return { missingKey: terrainPairKey(uniqueMaterials[0], uniqueMaterials[1]) };
   }
 
-  const corners = transitionCornersForUpperCell(document, cell, transition);
-  return allCornersAre(corners, transition.upperTerrain)
-    ? {}
-    : { transition, corners };
-}
-
-function transitionForUniformMaterial(
-  transitions: TerrainTransitionDefinition[],
-  material: string,
-) {
-  return transitions.find(
-    (transition) =>
-      transition.upperTerrain === material || transition.lowerTerrain === material,
-  );
+  return { transition, corners };
 }
 
 function clearTerrainOwnedLayers(
@@ -352,6 +343,21 @@ function clearTerrainOwnedLayers(
       layer.data[index] = 0;
     }
   }
+}
+
+function hasTerrainOwnedLayerData(
+  document: MapDocument,
+  index: number,
+  ownedLayerIds: Set<string>,
+) {
+  for (const layerId of ownedLayerIds) {
+    const layer = findMutableTileLayer(document, layerId);
+    if (layer?.data[index]) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function terrainOwnedLayerIds(document: MapDocument) {
@@ -402,57 +408,8 @@ function resolveTerrainMaterialFill(document: MapDocument, materialId: string) {
   };
 }
 
-function transitionCornersForUpperCell(
-  document: MapDocument,
-  cell: GridCoordinate,
-  transition: TerrainTransitionDefinition,
-): WangCornerMaterials {
-  const corner = (cells: GridCoordinate[]) =>
-    cells.some(
-      (candidate) =>
-        isInsideMap(candidate, document.size) &&
-        terrainCellAt(document, candidate) === transition.lowerTerrain,
-    )
-      ? transition.lowerTerrain
-      : transition.upperTerrain;
-
-  return {
-    nw: corner([
-      { column: cell.column - 1, row: cell.row - 1 },
-      { column: cell.column, row: cell.row - 1 },
-      { column: cell.column - 1, row: cell.row },
-    ]),
-    ne: corner([
-      { column: cell.column, row: cell.row - 1 },
-      { column: cell.column + 1, row: cell.row - 1 },
-      { column: cell.column + 1, row: cell.row },
-    ]),
-    sw: corner([
-      { column: cell.column - 1, row: cell.row },
-      { column: cell.column - 1, row: cell.row + 1 },
-      { column: cell.column, row: cell.row + 1 },
-    ]),
-    se: corner([
-      { column: cell.column + 1, row: cell.row },
-      { column: cell.column, row: cell.row + 1 },
-      { column: cell.column + 1, row: cell.row + 1 },
-    ]),
-  };
-}
-
 function isEmptyTerrain(document: MapDocument, material: string) {
   return material === document.editor.baseTerrain;
-}
-
-function cardinalNeighborMaterials(document: MapDocument, cell: GridCoordinate) {
-  return [
-    { column: cell.column, row: cell.row - 1 },
-    { column: cell.column + 1, row: cell.row },
-    { column: cell.column, row: cell.row + 1 },
-    { column: cell.column - 1, row: cell.row },
-  ]
-    .filter((neighbor) => isInsideMap(neighbor, document.size))
-    .map((neighbor) => terrainCellAt(document, neighbor));
 }
 
 function terrainCellAt(document: MapDocument, cell: GridCoordinate) {
