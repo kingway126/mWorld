@@ -1,10 +1,10 @@
-import { Box, Layers3, Map, Settings2 } from "lucide-react";
+import { Layers3, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import type { MapDocument } from "../model/mapDocument";
 import { InspectorPanel } from "./InspectorPanel";
 import { LayerPanel } from "./LayerPanel";
 
-type InspectorTab = "layers" | "tile" | "map" | "export";
+type InspectorTab = "layers" | "properties";
 
 interface InspectorTabsProps {
   mapDocument: MapDocument;
@@ -19,10 +19,8 @@ const tabs: Array<{
   label: string;
   icon: typeof Layers3;
 }> = [
-  { id: "layers", label: "Layers", icon: Layers3 },
-  { id: "tile", label: "Tile", icon: Box },
-  { id: "map", label: "Map", icon: Map },
-  { id: "export", label: "Export", icon: Settings2 },
+  { id: "layers", label: "图层", icon: Layers3 },
+  { id: "properties", label: "属性", icon: SlidersHorizontal },
 ];
 
 export function InspectorTabs({
@@ -38,12 +36,12 @@ export function InspectorTabs({
     <aside className="inspector-panel">
       <div className="panel-header">
         <div>
-          <h2>Inspector</h2>
-          <span>Layers, map data, export state</span>
+          <h2>属性</h2>
+          <span>图层与当前选择</span>
         </div>
       </div>
 
-      <div className="inspector-tabs" role="tablist" aria-label="Inspector tabs">
+      <div className="inspector-tabs" role="tablist" aria-label="右侧面板">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -70,7 +68,7 @@ export function InspectorTabs({
           />
         )}
 
-        {activeTab !== "layers" && (
+        {activeTab === "properties" && (
           <InspectorPanel mapDocument={mapDocument} selectedGid={selectedGid} />
         )}
       </div>

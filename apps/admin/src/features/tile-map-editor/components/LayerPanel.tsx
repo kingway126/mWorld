@@ -19,7 +19,7 @@ export function LayerPanel({
   return (
     <section className="side-section" aria-labelledby="layers-title">
       <div className="section-heading" id="layers-title">
-        Layers
+        图层
       </div>
 
       <div className="layer-list">
@@ -35,8 +35,8 @@ export function LayerPanel({
             <button
               className="mini-icon-button"
               type="button"
-              title={layer.visible ? "Hide layer" : "Show layer"}
-              aria-label={layer.visible ? "Hide layer" : "Show layer"}
+              title={layer.visible ? "隐藏图层" : "显示图层"}
+              aria-label={layer.visible ? "隐藏图层" : "显示图层"}
               onClick={() => onToggleVisibility(layer.id)}
             >
               {layer.visible ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -44,8 +44,8 @@ export function LayerPanel({
             <button
               className="mini-icon-button"
               type="button"
-              title={layer.locked ? "Unlock layer" : "Lock layer"}
-              aria-label={layer.locked ? "Unlock layer" : "Lock layer"}
+              title={layer.locked ? "解锁图层" : "锁定图层"}
+              aria-label={layer.locked ? "解锁图层" : "锁定图层"}
               onClick={() => onToggleLock(layer.id)}
             >
               {layer.locked ? <Lock size={15} /> : <Unlock size={15} />}

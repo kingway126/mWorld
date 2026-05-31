@@ -17,31 +17,31 @@ export function InspectorPanel({ mapDocument, selectedGid }: InspectorPanelProps
   return (
     <section className="side-section" aria-labelledby="inspector-title">
       <div className="section-heading" id="inspector-title">
-        Inspector
+        当前属性
       </div>
 
       <dl className="inspector-list">
         <div>
-          <dt>Map</dt>
+          <dt>地图</dt>
           <dd>{mapDocument.name}</dd>
         </div>
         <div>
-          <dt>Size</dt>
+          <dt>尺寸</dt>
           <dd>
-            {mapDocument.size.columns} x {mapDocument.size.rows}
+            {mapDocument.size.columns} × {mapDocument.size.rows}
           </dd>
         </div>
         <div>
-          <dt>Tile</dt>
-          <dd>{selectedTile?.tile.name ?? "Empty"}</dd>
+          <dt>图块</dt>
+          <dd>{selectedTile?.tile.name ?? "空"}</dd>
         </div>
         <div>
-          <dt>Layer</dt>
-          <dd>{activeLayer?.name ?? "None"}</dd>
+          <dt>图层</dt>
+          <dd>{activeLayer?.name ?? "未选择"}</dd>
         </div>
         <div>
-          <dt>Status</dt>
-          <dd>{issues.length === 0 ? "Valid" : `${issues.length} issue(s)`}</dd>
+          <dt>状态</dt>
+          <dd>{issues.length === 0 ? "正常" : `${issues.length} 个问题`}</dd>
         </div>
       </dl>
     </section>

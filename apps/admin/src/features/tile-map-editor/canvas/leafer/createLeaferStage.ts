@@ -12,7 +12,7 @@ export interface TileMapLeaferStage {
 export function createLeaferStage(view: HTMLElement): TileMapLeaferStage {
   const leafer = new Leafer({
     view,
-    fill: "#111820",
+    fill: "#101722",
     smooth: false,
     pixelRatio: window.devicePixelRatio,
   });

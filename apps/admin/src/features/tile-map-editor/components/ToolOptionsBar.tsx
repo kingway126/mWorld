@@ -1,6 +1,5 @@
 import { Grid3X3, Magnet, Shuffle } from "lucide-react";
 import type { EditorTool } from "../canvas/tools/editorTool";
-import type { ViewportState } from "../model/coordinates";
 import type { PaintSource, StampBrush } from "../model/brush";
 import type { TerrainMaterialDefinition } from "../model/tileset";
 
@@ -15,19 +14,18 @@ interface ToolOptionsBarProps {
   randomEnabled: boolean;
   randomCandidateCount: number;
   missingTransitionCount: number;
-  viewport: ViewportState;
   onTerrainBrushSizeChange: (size: number) => void;
   onToggleRandom: () => void;
 }
 
 const toolLabels: Record<EditorTool, string> = {
-  brush: "Brush",
-  terrain: "Terrain",
-  "rect-fill": "Rect Fill",
-  stamp: "Stamp",
-  eraser: "Eraser",
-  picker: "Picker",
-  pan: "Pan",
+  brush: "图块画笔",
+  terrain: "地形画笔",
+  "rect-fill": "矩形填充",
+  stamp: "图章",
+  eraser: "橡皮擦",
+  picker: "吸管",
+  pan: "平移",
 };
 
 export function ToolOptionsBar({
@@ -41,7 +39,6 @@ export function ToolOptionsBar({
   randomEnabled,
   randomCandidateCount,
   missingTransitionCount,
-  viewport,
   onTerrainBrushSizeChange,
   onToggleRandom,
 }: ToolOptionsBarProps) {
@@ -58,13 +55,13 @@ export function ToolOptionsBar({
   return (
     <div className="tool-options-bar">
       <div className="option-section option-section-primary">
-        <span className="option-label">Mode</span>
+        <span className="option-label">模式</span>
         <strong>{toolLabels[activeTool]}</strong>
       </div>
 
       <div className="option-section">
         <span className="option-label">{sourceLabel(activeTool, paintSource)}</span>
-        <div className="brush-size-pill" aria-label="Current brush source">
+        <div className="brush-size-pill" aria-label="当前画笔素材">
           <span>
             {sourceValue({
               activeTool,
@@ -82,9 +79,9 @@ export function ToolOptionsBar({
 
       {canResizeTerrainBrush && (
         <label className="option-section terrain-size-control">
-          <span className="option-label">Size</span>
+          <span className="option-label">笔刷</span>
           <input
-            aria-label="Terrain brush size"
+            aria-label="地形笔刷尺寸"
             max={8}
             min={1}
             type="range"
@@ -94,61 +91,58 @@ export function ToolOptionsBar({
             }
           />
           <strong>
-            {terrainBrushSize}x{terrainBrushSize}
+            {terrainBrushSize} × {terrainBrushSize}
           </strong>
         </label>
       )}
 
       <div className="option-section option-toggles">
-        <button
-          className="option-toggle-button"
-          type="button"
-          data-active={randomEnabled}
-          disabled={!canUseRandom}
-          title={
-            randomCandidateCount > 0
-              ? `${randomCandidateCount} random candidates`
-              : "Add tiles to the random set first"
-          }
-          onClick={onToggleRandom}
-        >
-          <Shuffle aria-hidden="true" size={15} />
-          Random {randomCandidateCount}
-        </button>
+        {randomCandidateCount > 0 && (
+          <button
+            className="option-toggle-button"
+            type="button"
+            data-active={randomEnabled}
+            disabled={!canUseRandom}
+            title={
+              canUseRandom
+                ? `${randomCandidateCount} 个随机候选`
+                : "切换到图块画笔或矩形填充后可用"
+            }
+            onClick={onToggleRandom}
+          >
+            <Shuffle aria-hidden="true" size={15} />
+            随机 {randomCandidateCount}
+          </button>
+        )}
         <span className="option-indicator" data-active="true">
           <Grid3X3 aria-hidden="true" size={15} />
-          Grid
+          网格
         </span>
         <span className="option-indicator" data-active="true">
           <Magnet aria-hidden="true" size={15} />
-          Snap
+          吸附
         </span>
       </div>
 
       {missingTransitionCount > 0 && (
         <div className="map-warning-pill" role="status">
-          Missing transitions {missingTransitionCount}
+          缺少过渡 {missingTransitionCount}
         </div>
       )}
-
-      <div className="option-section option-section-trailing">
-        <span className="option-label">Zoom</span>
-        <strong>{Math.round(viewport.zoom * 100)}%</strong>
-      </div>
     </div>
   );
 }
 
 function sourceLabel(activeTool: EditorTool, paintSource: PaintSource) {
   if (activeTool === "stamp") {
-    return "Stamp";
+    return "图章";
   }
 
   if (activeTool === "rect-fill") {
-    return paintSource === "terrain" ? "Terrain fill" : "Tile fill";
+    return paintSource === "terrain" ? "地形填充" : "图块填充";
   }
 
-  return activeTool === "terrain" ? "Terrain" : "Brush";
+  return activeTool === "terrain" ? "地形" : "图块";
 }
 
 function sourceValue(options: {
@@ -163,21 +157,21 @@ function sourceValue(options: {
 }) {
   if (options.activeTool === "stamp") {
     return options.selectedStamp
-      ? `${options.selectedStamp.width}x${options.selectedStamp.height}`
-      : "None";
+      ? `${options.selectedStamp.width} × ${options.selectedStamp.height}`
+      : "未创建";
   }
 
   if (options.paintSource === "terrain") {
     if (options.activeTool === "eraser") {
-      return `${options.terrainBrushSize}x${options.terrainBrushSize}`;
+      return `${options.terrainBrushSize} × ${options.terrainBrushSize}`;
     }
 
-    return options.selectedTerrainName ?? "None";
+    return options.selectedTerrainName ?? "未选择";
   }
 
   if (options.randomEnabled && options.randomCandidateCount > 0) {
-    return `Random ${options.randomCandidateCount}`;
+    return `随机 ${options.randomCandidateCount}`;
   }
 
-  return `GID ${options.selectedGid}`;
+  return `图块 ${options.selectedGid}`;
 }

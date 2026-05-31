@@ -1,10 +1,11 @@
-import { CheckCircle2, Download, Redo2, Undo2 } from "lucide-react";
+import { AlertTriangle, Download, Redo2, Undo2 } from "lucide-react";
 import type { MapDocument } from "../model/mapDocument";
 
 interface TopAppBarProps {
   mapDocument: MapDocument;
   canUndo: boolean;
   canRedo: boolean;
+  issueCount: number;
   onUndo: () => void;
   onRedo: () => void;
   onExport: () => void;
@@ -14,6 +15,7 @@ export function TopAppBar({
   mapDocument,
   canUndo,
   canRedo,
+  issueCount,
   onUndo,
   onRedo,
   onExport,
@@ -28,26 +30,28 @@ export function TopAppBar({
           <span className="workspace-label">mWorld Studio</span>
           <h1>{mapDocument.name}</h1>
           <div className="document-meta">
-            <span>Orthogonal</span>
+            <span>正交地图</span>
             <span>
-              {mapDocument.size.columns} x {mapDocument.size.rows}
+              {mapDocument.size.columns} × {mapDocument.size.rows}
             </span>
-            <span>Phaser/Tiled JSON</span>
+            <span>Tiled / Phaser JSON</span>
           </div>
         </div>
       </div>
 
       <div className="top-app-actions">
-        <span className="save-state">
-          <CheckCircle2 aria-hidden="true" size={15} />
-          Valid
-        </span>
-        <div className="action-cluster" aria-label="History actions">
+        {issueCount > 0 && (
+          <span className="top-app-warning" role="status">
+            <AlertTriangle aria-hidden="true" size={15} />
+            {issueCount} 个问题
+          </span>
+        )}
+        <div className="action-cluster" aria-label="历史操作">
           <button
             className="chrome-icon-button"
             type="button"
-            aria-label="Undo"
-            title="Undo"
+            aria-label="撤销"
+            title="撤销"
             disabled={!canUndo}
             onClick={onUndo}
           >
@@ -56,8 +60,8 @@ export function TopAppBar({
           <button
             className="chrome-icon-button"
             type="button"
-            aria-label="Redo"
-            title="Redo"
+            aria-label="重做"
+            title="重做"
             disabled={!canRedo}
             onClick={onRedo}
           >
@@ -66,7 +70,7 @@ export function TopAppBar({
         </div>
         <button className="export-button" type="button" onClick={onExport}>
           <Download aria-hidden="true" size={16} />
-          Export JSON
+          导出地图
         </button>
       </div>
     </header>

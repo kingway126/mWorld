@@ -20,13 +20,13 @@ const tools: Array<{
   label: string;
   icon: typeof Paintbrush;
 }> = [
-  { tool: "brush", label: "Brush", icon: Paintbrush },
-  { tool: "terrain", label: "Terrain", icon: Grid3X3 },
-  { tool: "rect-fill", label: "Rect Fill", icon: BoxSelect },
-  { tool: "stamp", label: "Stamp", icon: Stamp },
-  { tool: "eraser", label: "Eraser", icon: Eraser },
-  { tool: "picker", label: "Picker", icon: Pipette },
-  { tool: "pan", label: "Pan", icon: Hand },
+  { tool: "brush", label: "图块画笔", icon: Paintbrush },
+  { tool: "terrain", label: "地形画笔", icon: Grid3X3 },
+  { tool: "rect-fill", label: "矩形填充", icon: BoxSelect },
+  { tool: "stamp", label: "图章", icon: Stamp },
+  { tool: "eraser", label: "橡皮擦", icon: Eraser },
+  { tool: "picker", label: "吸管", icon: Pipette },
+  { tool: "pan", label: "平移", icon: Hand },
 ];
 
 export function ToolRail({
@@ -35,7 +35,7 @@ export function ToolRail({
   onToolSelect,
 }: ToolRailProps) {
   return (
-    <nav className="tool-rail" aria-label="Editor tools">
+    <nav className="tool-rail" aria-label="编辑工具">
       {tools.map(({ tool, label, icon: Icon }) => {
         const disabled = tool === "stamp" && !hasStamp;
 
@@ -48,7 +48,7 @@ export function ToolRail({
             aria-label={label}
             title={
               disabled
-                ? "Drag over tiles in the atlas to create a stamp"
+                ? "在图块集中拖拽选择区域后可使用图章"
                 : label
             }
             disabled={disabled}

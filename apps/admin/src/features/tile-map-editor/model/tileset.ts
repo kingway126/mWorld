@@ -112,7 +112,7 @@ export function createAtlasTiles(options: {
 
   return Array.from({ length: tileCount }, (_, localId) => ({
     localId,
-    name: options.names?.[localId] ?? `Tile ${localId + 1}`,
+    name: options.names?.[localId] ?? `图块 ${localId + 1}`,
     semantic: options.semantics?.[localId],
     tags: options.tags?.[localId] ?? [],
   }));
@@ -129,7 +129,7 @@ export function createWangTiles(options: {
 
   return layout.map((roles, localId) => ({
     localId,
-    name: options.names?.[localId] ?? `Wang ${localId}`,
+    name: options.names?.[localId] ?? `自动地形 ${localId + 1}`,
     tags: options.tags?.[localId] ?? [],
     wangCorners: materializeWangCorners(roles, options),
   }));

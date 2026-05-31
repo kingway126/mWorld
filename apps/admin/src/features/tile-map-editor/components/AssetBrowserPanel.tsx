@@ -141,14 +141,12 @@ export function AssetBrowserPanel({
     <aside className="asset-browser">
       <div className="panel-header">
         <div>
-          <h2>Assets</h2>
-          <span>
-            {tilesets.length} tilesets / {terrainMaterials.length} terrains
-          </span>
+          <h2>素材</h2>
+          <span>选择地形或图块开始绘制</span>
         </div>
       </div>
 
-      <div className="asset-mode-tabs" aria-label="Asset browser modes">
+      <div className="asset-mode-tabs" aria-label="素材类型">
         {assetModes.map((mode) => (
           <button
             key={mode.id}
@@ -165,7 +163,7 @@ export function AssetBrowserPanel({
         <Search aria-hidden="true" size={15} />
         <input
           type="search"
-          placeholder="Search assets"
+          placeholder="搜索素材"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -175,7 +173,7 @@ export function AssetBrowserPanel({
         {assetMode === "terrains" && (
           <section className="asset-section">
             <div className="asset-section-title">
-              <span>Terrain Materials</span>
+              <span>地形素材</span>
               <span>{visibleTerrainMaterials.length}</span>
             </div>
             <div className="asset-grid terrain-grid">
@@ -201,7 +199,7 @@ export function AssetBrowserPanel({
               ))}
             </div>
             {visibleTerrainMaterials.length === 0 && (
-              <div className="asset-empty-state">No terrains found</div>
+              <div className="asset-empty-state">没有匹配的地形</div>
             )}
           </section>
         )}
@@ -217,7 +215,7 @@ export function AssetBrowserPanel({
             return (
               <section className="asset-section" key={tileset.id}>
                 <div className="asset-section-title">
-                  <span>{tileset.name}</span>
+                  <span>{tilesetDisplayName(tileset)}</span>
                   <span>{tileset.visibleTileCount}</span>
                 </div>
                 <div
@@ -249,7 +247,7 @@ export function AssetBrowserPanel({
                         disabled={isFilteredOut}
                         key={tile.localId}
                         type="button"
-                        title={`${tile.name} - GID ${gid}`}
+                        title={`${tile.name} / GID ${gid}`}
                         aria-label={tile.name}
                         onClick={(event) => {
                           if (lastStampDragRef.current) {
@@ -267,7 +265,7 @@ export function AssetBrowserPanel({
                   })}
                 </div>
                 {tileset.visibleTileCount === 0 && (
-                  <div className="asset-empty-state">No tiles found</div>
+                  <div className="asset-empty-state">没有匹配的图块</div>
                 )}
               </section>
             );
@@ -288,21 +286,21 @@ export function AssetBrowserPanel({
           />
           <div>
             <span className="selected-asset-label">
-              {assetMode === "terrains" ? "Selected terrain" : "Selected tile"}
+              {assetMode === "terrains" ? "当前地形" : "当前图块"}
             </span>
             <strong>
               {assetMode === "terrains"
-                ? selectedTerrain?.name ?? "None"
-                : selectedTile?.name ?? "Empty"}
+                ? selectedTerrain?.name ?? "未选择"
+                : selectedTile?.name ?? "空图块"}
             </strong>
             <span>
               {assetMode === "terrains"
                 ? selectedTerrain
-                  ? `${selectedTerrain.sourceTilesetId} / ${selectedTerrain.sourceRole} #${selectedTerrain.sourceLocalId}`
-                  : "No terrain"
+                  ? "地形画笔素材"
+                  : "暂无地形"
                 : selectedTile
-                  ? `${selectedTile.tileset} / GID ${selectedTile.gid}`
-                  : "No tile"}
+                  ? `${tilesetDisplayName(selectedTile.tilesetRef)} / GID ${selectedTile.gid}`
+                  : "暂无图块"}
             </span>
           </div>
         </div>
@@ -310,9 +308,9 @@ export function AssetBrowserPanel({
         {selectedStamp && (
           <section className="stamp-preview-card">
             <div className="asset-section-title">
-              <span>Stamp</span>
+              <span>图章</span>
               <span>
-                {selectedStamp.width} x {selectedStamp.height}
+                {selectedStamp.width} × {selectedStamp.height}
               </span>
             </div>
             <div
@@ -335,49 +333,53 @@ export function AssetBrowserPanel({
           </section>
         )}
 
-        <section className="random-set-card">
-          <div className="asset-section-title">
-            <span>Random Set</span>
-            <span>{randomCandidates.length}</span>
-          </div>
-          <div className="random-set-actions">
-            <button
-              className="mini-command-button"
-              type="button"
-              disabled={!selectedTile}
-              onClick={() => selectedTile && onAddRandomCandidate(selectedTile.gid)}
-            >
-              <Plus aria-hidden="true" size={14} />
-              Add
-            </button>
-            <button
-              className="mini-icon-button"
-              type="button"
-              title="Clear random set"
-              aria-label="Clear random set"
-              disabled={randomCandidates.length === 0}
-              onClick={onClearRandomCandidates}
-            >
-              <X aria-hidden="true" size={14} />
-            </button>
-          </div>
-          <div className="random-chip-list">
-            {randomCandidates.map((candidate) => (
+        {assetMode === "tiles" && (
+          <section className="random-set-card">
+            <div className="asset-section-title">
+              <span>随机候选</span>
+              <span>{randomCandidates.length}</span>
+            </div>
+            <div className="random-set-actions">
               <button
-                className="random-chip"
-                key={candidate.gid}
+                className="mini-command-button"
                 type="button"
-                title={`Remove GID ${candidate.gid}`}
-                onClick={() => onRemoveRandomCandidate(candidate.gid)}
+                disabled={!selectedTile}
+                onClick={() =>
+                  selectedTile && onAddRandomCandidate(selectedTile.gid)
+                }
               >
-                <span
-                  style={tilePreviewStyle(candidate.tilesetRef, candidate.tile)}
-                />
-                <strong>{candidate.gid}</strong>
+                <Plus aria-hidden="true" size={14} />
+                加入
               </button>
-            ))}
-          </div>
-        </section>
+              <button
+                className="mini-icon-button"
+                type="button"
+                title="清空随机候选"
+                aria-label="清空随机候选"
+                disabled={randomCandidates.length === 0}
+                onClick={onClearRandomCandidates}
+              >
+                <X aria-hidden="true" size={14} />
+              </button>
+            </div>
+            <div className="random-chip-list">
+              {randomCandidates.map((candidate) => (
+                <button
+                  className="random-chip"
+                  key={candidate.gid}
+                  type="button"
+                  title={`移除 GID ${candidate.gid}`}
+                  onClick={() => onRemoveRandomCandidate(candidate.gid)}
+                >
+                  <span
+                    style={tilePreviewStyle(candidate.tilesetRef, candidate.tile)}
+                  />
+                  <strong>{candidate.gid}</strong>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </aside>
   );
@@ -472,9 +474,23 @@ export function AssetBrowserPanel({
 }
 
 const assetModes: Array<{ id: AssetMode; label: string }> = [
-  { id: "terrains", label: "Terrains" },
-  { id: "tiles", label: "Tiles" },
+  { id: "terrains", label: "地形" },
+  { id: "tiles", label: "图块" },
 ];
+
+function tilesetDisplayName(tileset: TilesetRef) {
+  const names: Record<string, string> = {
+    "kenney-tiny-town": "小镇图块",
+    "kenney-tiny-pack": "地牢图块",
+    "wang-sand": "沙地边缘",
+    "wang-water": "水岸边缘",
+    "wang-upper-rim": "高地边缘",
+    "wang-field": "田地边缘",
+    "wang-sand-water": "沙地水岸",
+  };
+
+  return names[tileset.id] ?? tileset.name;
+}
 
 function tileMatchesQuery(
   tileset: TilesetRef,
@@ -622,14 +638,15 @@ function terrainTitle(
   const linkedTilesetNames = material.linkedTilesetIds
     .map(
       (tilesetId) =>
-        tilesets.find((tileset) => tileset.id === tilesetId)?.name ?? tilesetId,
+        tilesets.find((tileset) => tileset.id === tilesetId),
     )
+    .map((tileset) => (tileset ? tilesetDisplayName(tileset) : "未知图集"))
     .join(", ");
 
   return [
     `${material.name} - ${material.description}`,
-    `Source: ${sourceTileset?.name ?? material.sourceTilesetId} ${material.sourceRole} tile #${material.sourceLocalId}`,
-    `Transitions: ${linkedTilesetNames}`,
+    `来源：${sourceTileset ? tilesetDisplayName(sourceTileset) : material.sourceTilesetId} #${material.sourceLocalId}`,
+    `关联：${linkedTilesetNames}`,
   ].join("\n");
 }
 

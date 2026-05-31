@@ -51,15 +51,15 @@ export function createEmptyTileLayer(
 }
 
 const commonTerrainNames: Record<number, string> = {
-  0: "Grass plain",
-  1: "Flower grass",
-  3: "Dirt plain",
-  27: "Water plain",
-  35: "Water inner",
-  64: "Well",
-  65: "Hay bale",
-  66: "Barrel",
-  67: "Crate",
+  0: "草地",
+  1: "花草地",
+  3: "泥地",
+  27: "水面",
+  35: "内侧水面",
+  64: "水井",
+  65: "干草堆",
+  66: "木桶",
+  67: "木箱",
 };
 
 const commonTags: Record<number, string[]> = {
@@ -110,10 +110,10 @@ export const tinyDungeonTileset: TilesetRef = {
     columns: 12,
     rows: 11,
     names: {
-      38: "Stone floor",
-      39: "Cracked stone",
-      66: "Barrel",
-      67: "Bookshelf",
+      38: "石地板",
+      39: "裂纹石地板",
+      66: "木桶",
+      67: "书架",
     },
     tags: {
       38: ["regular", "floor", "stone", "walkable"],
@@ -125,22 +125,22 @@ export const tinyDungeonTileset: TilesetRef = {
 };
 
 const wangMaskNames = [
-  "Isolated",
-  "North join",
-  "East join",
-  "North east bend",
-  "South join",
-  "Vertical join",
-  "East south bend",
-  "Open west edge",
-  "West join",
-  "North west bend",
-  "Horizontal join",
-  "Open south edge",
-  "South west bend",
-  "Open east edge",
-  "Open north edge",
-  "Filled",
+  "孤立",
+  "北侧连接",
+  "东侧连接",
+  "东北弯角",
+  "南侧连接",
+  "纵向连接",
+  "东南弯角",
+  "西侧开口",
+  "西侧连接",
+  "西北弯角",
+  "横向连接",
+  "南侧开口",
+  "西南弯角",
+  "东侧开口",
+  "北侧开口",
+  "填满",
 ];
 
 function createWangTileset(
@@ -169,7 +169,10 @@ function createWangTileset(
       lowerTerrain,
       upperTerrain,
       names: Object.fromEntries(
-        wangMaskNames.map((name, index) => [index, `${name} ${name === "Filled" ? "center" : "edge"}`]),
+        wangMaskNames.map((name, index) => [
+          index,
+          `${name}${index === 15 ? "中心" : "边缘"}`,
+        ]),
       ),
       tags: Object.fromEntries(
         wangMaskNames.map((_, index) => [index, ["wang", "terrain", index === 15 ? "center" : "edge"]]),
@@ -236,8 +239,8 @@ export const sampleTilesets: TilesetRef[] = [
 export const sampleTerrainTransitions: TerrainTransitionDefinition[] = [
   {
     id: "sand-path",
-    name: "Sand path",
-    description: "A regular Wang terrain for paths and open walkable trails.",
+    name: "沙地小路",
+    description: "用于道路和可行走空地的 Wang 地形。",
     color: "#d7a263",
     targetLayerId: "ground",
     tilesetId: "wang-sand",
@@ -247,8 +250,8 @@ export const sampleTerrainTransitions: TerrainTransitionDefinition[] = [
   },
   {
     id: "water-bank",
-    name: "Water bank",
-    description: "A water terrain that automatically fixes banks and corners.",
+    name: "水岸",
+    description: "自动补齐岸线和转角的水域地形。",
     color: "#4ea8dd",
     targetLayerId: "ground",
     tilesetId: "wang-water",
@@ -258,8 +261,8 @@ export const sampleTerrainTransitions: TerrainTransitionDefinition[] = [
   },
   {
     id: "upper-rim",
-    name: "Rim",
-    description: "An upper-layer Wang rim terrain drawn on the Details layer.",
+    name: "高地边缘",
+    description: "绘制在细节图层上的高地边缘。",
     color: "#76617b",
     targetLayerId: "details",
     tilesetId: "wang-upper-rim",
@@ -269,8 +272,8 @@ export const sampleTerrainTransitions: TerrainTransitionDefinition[] = [
   },
   {
     id: "raised-field",
-    name: "Raised field",
-    description: "A raised field terrain base drawn on the Ground layer.",
+    name: "田地",
+    description: "绘制在地表图层上的田地底面。",
     color: "#aacd6f",
     targetLayerId: "ground",
     tilesetId: "wang-field",
@@ -280,8 +283,8 @@ export const sampleTerrainTransitions: TerrainTransitionDefinition[] = [
   },
   {
     id: "sand-water-bank",
-    name: "Sand water bank",
-    description: "A shoreline Wang terrain for transitions between sand and water.",
+    name: "沙地水岸",
+    description: "用于沙地和水面之间过渡的岸线地形。",
     color: "#e0a56f",
     targetLayerId: "ground",
     tilesetId: "wang-sand-water",
@@ -301,32 +304,32 @@ const terrainMaterialDetails: Record<
   Pick<TerrainMaterialDefinition, "name" | "description" | "color" | "tags">
 > = {
   grass: {
-    name: "Grass",
-    description: "Lower terrain material extracted from the Wang endpoint tiles.",
+    name: "草地",
+    description: "基础地形素材。",
     color: "#7fce58",
     tags: ["grass", "base", "walkable"],
   },
   sand: {
-    name: "Sand",
-    description: "Upper terrain material extracted from sand Wang tiles.",
+    name: "沙地",
+    description: "可行走的小路和沙地素材。",
     color: "#d7a263",
     tags: ["sand", "path", "walkable"],
   },
   water: {
-    name: "Water",
-    description: "Upper terrain material extracted from water Wang tiles.",
+    name: "水面",
+    description: "不可通行的水域素材。",
     color: "#4ea8dd",
     tags: ["water", "blocked"],
   },
   rim: {
-    name: "Rim",
-    description: "Upper detail material extracted from rim Wang tiles.",
+    name: "高地边缘",
+    description: "叠加在细节图层上的边缘素材。",
     color: "#76617b",
     tags: ["rim", "details", "upper"],
   },
   field: {
-    name: "Field",
-    description: "Upper terrain material extracted from field Wang tiles.",
+    name: "田地",
+    description: "农田和隆起地面的地形素材。",
     color: "#aacd6f",
     tags: ["field", "farm", "multi-layer"],
   },
@@ -367,7 +370,7 @@ function addTerrainEndpointMaterial(
 
   const details = terrainMaterialDetails[materialId] ?? {
     name: formatTerrainMaterialName(materialId),
-    description: `${formatTerrainMaterialName(materialId)} material extracted from Wang endpoint tiles.`,
+    description: `${formatTerrainMaterialName(materialId)} 地形素材。`,
     color: transition.color,
     tags: [materialId, "terrain"],
   };
@@ -420,7 +423,7 @@ export function createSampleMapDocument(): MapDocument {
   return {
     schemaVersion: MAP_DOCUMENT_SCHEMA_VERSION,
     id: "demo-map",
-    name: "Demo Orthogonal Map",
+    name: "正交地图 Demo",
     orientation: "orthogonal",
     tileSize: { width: 16, height: 16 },
     size,
@@ -428,9 +431,9 @@ export function createSampleMapDocument(): MapDocument {
     terrainMaterials: sampleTerrainMaterials,
     terrainTransitions: sampleTerrainTransitions,
     layers: [
-      createEmptyTileLayer("ground", "Ground", size),
-      createEmptyTileLayer("details", "Details", size),
-      createEmptyTileLayer("objects", "Objects", size),
+      createEmptyTileLayer("ground", "地表", size),
+      createEmptyTileLayer("details", "细节", size),
+      createEmptyTileLayer("objects", "对象", size),
     ],
     editor: {
       activeLayerId: "ground",

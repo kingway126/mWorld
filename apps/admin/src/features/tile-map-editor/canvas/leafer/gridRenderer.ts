@@ -16,7 +16,7 @@ export function renderGrid(stage: TileMapLeaferStage, document: MapDocument) {
       width,
       height,
       fill: "rgba(255,255,255,0)",
-      stroke: "rgba(211, 228, 255, 0.42)",
+      stroke: "rgba(226, 235, 255, 0.34)",
       strokeWidth: 2,
       hittable: false,
     }),
@@ -24,11 +24,14 @@ export function renderGrid(stage: TileMapLeaferStage, document: MapDocument) {
 
   for (let column = 1; column < size.columns; column += 1) {
     const x = column * tileSize.width;
+    const major = column % 4 === 0;
     stage.gridLayer.add(
       new Line({
         points: [x, 0, x, height],
-        stroke: "rgba(211, 228, 255, 0.13)",
-        strokeWidth: 1,
+        stroke: major
+          ? "rgba(226, 235, 255, 0.17)"
+          : "rgba(226, 235, 255, 0.075)",
+        strokeWidth: major ? 1.25 : 1,
         hittable: false,
       }),
     );
@@ -36,11 +39,14 @@ export function renderGrid(stage: TileMapLeaferStage, document: MapDocument) {
 
   for (let row = 1; row < size.rows; row += 1) {
     const y = row * tileSize.height;
+    const major = row % 4 === 0;
     stage.gridLayer.add(
       new Line({
         points: [0, y, width, y],
-        stroke: "rgba(211, 228, 255, 0.13)",
-        strokeWidth: 1,
+        stroke: major
+          ? "rgba(226, 235, 255, 0.17)"
+          : "rgba(226, 235, 255, 0.075)",
+        strokeWidth: major ? 1.25 : 1,
         hittable: false,
       }),
     );

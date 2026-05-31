@@ -25,7 +25,7 @@ export function TileMapEditorShell() {
   const activeLayerName =
     mapDocument.layers.find(
       (layer) => layer.id === mapDocument.editor.activeLayerId,
-    )?.name ?? "None";
+    )?.name ?? "未命名图层";
   const selectedTerrain = mapDocument.terrainMaterials.find(
     (material) => material.id === state.selectedTerrainId,
   );
@@ -50,6 +50,7 @@ export function TileMapEditorShell() {
       <TopAppBar
         canRedo={state.history.future.length > 0}
         canUndo={state.history.past.length > 0}
+        issueCount={missingTransitionCount}
         mapDocument={mapDocument}
         onExport={handleExport}
         onRedo={() => dispatch({ type: "redo" })}
@@ -98,7 +99,6 @@ export function TileMapEditorShell() {
             selectedTerrainId={state.selectedTerrainId}
             terrainBrushSize={state.terrainBrushSize}
             terrainMaterials={mapDocument.terrainMaterials}
-            viewport={mapDocument.editor.viewport}
             onTerrainBrushSizeChange={(size) =>
               dispatch({ type: "set-terrain-brush-size", size })
             }
@@ -133,13 +133,8 @@ export function TileMapEditorShell() {
             />
           </div>
           <StatusBar
-            activeTool={state.activeTool}
             activeLayerName={activeLayerName}
             hoverCell={state.hoverCell}
-            paintSource={state.paintSource}
-            selectedGid={state.selectedGid}
-            selectedStamp={state.selectedStamp}
-            selectedTerrainName={selectedTerrain?.name}
             viewport={mapDocument.editor.viewport}
           />
         </section>
