@@ -39,7 +39,7 @@ export function paintTerrain(
     return document;
   }
 
-  return updateTerrainCells(
+  return paintTerrainCells(
     document,
     terrainBrushCells(cell, brushSize, document.size),
     terrainId,
@@ -55,9 +55,35 @@ export function eraseTerrain(
     return document;
   }
 
-  return updateTerrainCells(
+  return eraseTerrainCells(
     document,
     terrainBrushCells(cell, brushSize, document.size),
+  );
+}
+
+export function paintTerrainCells(
+  document: MapDocument,
+  cells: GridCoordinate[],
+  terrainId: string,
+): MapDocument {
+  if (!document.terrainMaterials.some((terrain) => terrain.id === terrainId)) {
+    return document;
+  }
+
+  return updateTerrainCells(
+    document,
+    cells.filter((cell) => isInsideMap(cell, document.size)),
+    terrainId,
+  );
+}
+
+export function eraseTerrainCells(
+  document: MapDocument,
+  cells: GridCoordinate[],
+): MapDocument {
+  return updateTerrainCells(
+    document,
+    cells.filter((cell) => isInsideMap(cell, document.size)),
     document.editor.baseTerrain,
   );
 }

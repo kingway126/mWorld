@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { GridCoordinate, ViewportState } from "../model/coordinates";
 import {
   clampZoom,
@@ -7,6 +7,7 @@ import {
   type WorldPoint,
 } from "../model/coordinates";
 import type { MapDocument } from "../model/mapDocument";
+import type { PaintSource, StampBrush } from "../model/brush";
 import type { EditorTool } from "../canvas/tools/editorTool";
 import { clientToCanvasPoint, clientToGridCell } from "../canvas/leafer/coordinateMapper";
 import {
@@ -15,29 +16,37 @@ import {
 } from "../canvas/leafer/createLeaferStage";
 import { disposeLeaferStage } from "../canvas/leafer/disposeLeaferStage";
 import { renderGrid } from "../canvas/leafer/gridRenderer";
-import { renderSelection } from "../canvas/leafer/selectionRenderer";
+import {
+  renderSelection,
+  type SelectionPreview,
+} from "../canvas/leafer/selectionRenderer";
 import { renderTileLayers } from "../canvas/leafer/tileLayerRenderer";
 import { applyViewportToStage } from "../canvas/leafer/viewportController";
 
 interface TileCanvasProps {
   mapDocument: MapDocument;
   activeTool: EditorTool;
-  selectedGid: number;
+  selectedStamp?: StampBrush;
+  paintSource: PaintSource;
   brushSize: number;
   selectionFill?: string;
   hoverCell?: GridCoordinate;
   onPaint: (cell: GridCoordinate) => void;
+  onPaintRect: (start: GridCoordinate, end: GridCoordinate) => void;
+  onPaintStamp: (anchor: GridCoordinate) => void;
   onErase: (cell: GridCoordinate) => void;
   onPick: (cell: GridCoordinate) => void;
   onHoverCell: (cell?: GridCoordinate) => void;
   onViewportChange: (viewport: ViewportState) => void;
 }
 
-type DragMode = "brush" | "terrain" | "eraser" | "pan";
+type DragMode = "brush" | "terrain" | "rect-fill" | "eraser" | "pan";
 
 interface DragState {
   mode: DragMode;
   lastCellKey?: string;
+  rectStart?: GridCoordinate;
+  rectEnd?: GridCoordinate;
   panStart?: {
     point: WorldPoint;
     viewport: ViewportState;
@@ -51,11 +60,14 @@ function cellKey(cell: GridCoordinate) {
 export function TileCanvas({
   mapDocument,
   activeTool,
-  selectedGid,
+  selectedStamp,
+  paintSource,
   brushSize,
   selectionFill,
   hoverCell,
   onPaint,
+  onPaintRect,
+  onPaintStamp,
   onErase,
   onPick,
   onHoverCell,
@@ -68,6 +80,42 @@ export function TileCanvas({
   const activeToolRef = useRef(activeTool);
   const viewportRef = useRef(mapDocument.editor.viewport);
   const [stageReady, setStageReady] = useState(false);
+  const [rectPreview, setRectPreview] = useState<
+    { start: GridCoordinate; end: GridCoordinate } | undefined
+  >();
+  const selectionPreview = useMemo<SelectionPreview | undefined>(() => {
+    if (activeTool === "rect-fill" && rectPreview) {
+      return {
+        kind: "rect",
+        start: rectPreview.start,
+        end: rectPreview.end,
+        fill: paintSource === "terrain" ? selectionFill : undefined,
+      };
+    }
+
+    if (activeTool === "stamp") {
+      return {
+        kind: "stamp",
+        anchor: hoverCell,
+        stamp: selectedStamp,
+      };
+    }
+
+    return {
+      kind: "brush",
+      cell: hoverCell,
+      fill: selectionFill,
+      brushSize,
+    };
+  }, [
+    activeTool,
+    brushSize,
+    hoverCell,
+    paintSource,
+    rectPreview,
+    selectedStamp,
+    selectionFill,
+  ]);
 
   useEffect(() => {
     mapDocumentRef.current = mapDocument;
@@ -132,20 +180,14 @@ export function TileCanvas({
     renderSelection(
       stage,
       mapDocument,
-      hoverCell,
-      selectedGid,
-      selectionFill,
-      brushSize,
+      selectionPreview,
     );
   }, [
-    brushSize,
-    hoverCell,
     mapDocument.size,
     mapDocument.tileSize,
     mapDocument.tilesets,
     mapDocument.editor.missingTransitionCells,
-    selectionFill,
-    selectedGid,
+    selectionPreview,
     stageReady,
   ]);
 
@@ -227,13 +269,37 @@ export function TileCanvas({
       if (
         currentTool === "brush" ||
         currentTool === "terrain" ||
+        currentTool === "rect-fill" ||
         currentTool === "eraser"
       ) {
+        if (currentTool === "rect-fill") {
+          if (!isInsideMap(cell, mapDocumentRef.current.size)) {
+            return;
+          }
+
+          dragRef.current = {
+            mode: "rect-fill",
+            rectStart: cell,
+            rectEnd: cell,
+          };
+          setRectPreview({ start: cell, end: cell });
+          container.dataset.dragging = "true";
+          return;
+        }
+
         applyCellAction(cell, currentTool);
         dragRef.current = {
           mode: currentTool,
           lastCellKey: cellKey(cell),
         };
+        container.dataset.dragging = "true";
+        return;
+      }
+
+      if (currentTool === "stamp") {
+        if (isInsideMap(cell, mapDocumentRef.current.size)) {
+          onPaintStamp(cell);
+        }
       }
     };
 
@@ -258,6 +324,14 @@ export function TileCanvas({
         return;
       }
 
+      if (drag.mode === "rect-fill") {
+        drag.rectEnd = cell;
+        if (drag.rectStart) {
+          setRectPreview({ start: drag.rectStart, end: cell });
+        }
+        return;
+      }
+
       const nextKey = cellKey(cell);
       if (drag.lastCellKey === nextKey) {
         return;
@@ -268,8 +342,14 @@ export function TileCanvas({
     };
 
     const handlePointerUp = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      if (drag?.mode === "rect-fill" && drag.rectStart && drag.rectEnd) {
+        onPaintRect(drag.rectStart, drag.rectEnd);
+      }
+
       container.releasePointerCapture(event.pointerId);
       dragRef.current = undefined;
+      setRectPreview(undefined);
       delete container.dataset.dragging;
     };
 
@@ -309,7 +389,15 @@ export function TileCanvas({
       container.removeEventListener("pointerleave", handlePointerLeave);
       container.removeEventListener("wheel", handleWheel);
     };
-  }, [onErase, onHoverCell, onPaint, onPick, onViewportChange]);
+  }, [
+    onErase,
+    onHoverCell,
+    onPaint,
+    onPaintRect,
+    onPaintStamp,
+    onPick,
+    onViewportChange,
+  ]);
 
   return <div ref={containerRef} className="tile-canvas" />;
 }

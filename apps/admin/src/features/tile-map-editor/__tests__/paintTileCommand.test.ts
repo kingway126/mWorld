@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paintTile } from "../commands/paintTileCommand";
+import { paintTile, paintTileBatch } from "../commands/paintTileCommand";
 import { createSampleMapDocument } from "../model/mapDocument";
 
 describe("paintTile", () => {
@@ -39,5 +39,34 @@ describe("paintTile", () => {
     );
 
     expect(nextDocument).toBe(document);
+  });
+
+  it("updates many cells with one layer clone", () => {
+    const document = createSampleMapDocument();
+    const nextDocument = paintTileBatch(
+      document,
+      document.editor.activeLayerId,
+      [
+        { cell: { column: 1, row: 1 }, gid: 4 },
+        { cell: { column: 2, row: 1 }, gid: 5 },
+        { cell: { column: 3, row: 1 }, gid: 6 },
+      ],
+    );
+
+    const layer = nextDocument.layers.find(
+      (candidate) => candidate.id === document.editor.activeLayerId,
+    );
+    const previousLayer = document.layers.find(
+      (candidate) => candidate.id === document.editor.activeLayerId,
+    );
+
+    if (!layer || layer.type !== "tile" || !previousLayer || previousLayer.type !== "tile") {
+      throw new Error("Expected tile layers");
+    }
+
+    expect(layer.data[1 * document.size.columns + 1]).toBe(4);
+    expect(layer.data[1 * document.size.columns + 2]).toBe(5);
+    expect(layer.data[1 * document.size.columns + 3]).toBe(6);
+    expect(previousLayer.data[1 * document.size.columns + 1]).toBe(0);
   });
 });
