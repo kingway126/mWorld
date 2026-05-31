@@ -26,6 +26,12 @@ export function TileMapEditorShell() {
     mapDocument.layers.find(
       (layer) => layer.id === mapDocument.editor.activeLayerId,
     )?.name ?? "None";
+  const selectedTerrain = mapDocument.terrainMaterials.find(
+    (material) => material.id === state.selectedTerrainId,
+  );
+  const missingTransitionCount = mapDocument.editor.missingTransitionCells.filter(
+    Boolean,
+  ).length;
 
   const handleExport = () => {
     downloadJson(
@@ -53,20 +59,40 @@ export function TileMapEditorShell() {
 
         <AssetBrowserPanel
           selectedGid={state.selectedGid}
+          selectedTerrainId={state.selectedTerrainId}
+          terrainMaterials={mapDocument.terrainMaterials}
           tilesets={mapDocument.tilesets}
           onSelectGid={(gid) => dispatch({ type: "select-gid", gid })}
+          onSelectTerrain={(terrainId) =>
+            dispatch({ type: "select-terrain", terrainId })
+          }
         />
 
         <section className="canvas-region">
           <ToolOptionsBar
             activeTool={state.activeTool}
+            missingTransitionCount={missingTransitionCount}
+            selectedTerrainId={state.selectedTerrainId}
+            terrainBrushSize={state.terrainBrushSize}
+            terrainMaterials={mapDocument.terrainMaterials}
             viewport={mapDocument.editor.viewport}
+            onTerrainBrushSizeChange={(size) =>
+              dispatch({ type: "set-terrain-brush-size", size })
+            }
           />
           <div className="canvas-stage-shell">
             <TileCanvas
               activeTool={state.activeTool}
               hoverCell={state.hoverCell}
+              brushSize={
+                state.activeTool === "terrain" || state.activeTool === "eraser"
+                  ? state.terrainBrushSize
+                  : 1
+              }
               mapDocument={mapDocument}
+              selectionFill={
+                state.activeTool === "terrain" ? selectedTerrain?.color : undefined
+              }
               selectedGid={state.selectedGid}
               onErase={(cell) => dispatch({ type: "erase", cell })}
               onHoverCell={(cell) => dispatch({ type: "set-hover-cell", cell })}
@@ -78,9 +104,11 @@ export function TileMapEditorShell() {
             />
           </div>
           <StatusBar
+            activeTool={state.activeTool}
             activeLayerName={activeLayerName}
             hoverCell={state.hoverCell}
             selectedGid={state.selectedGid}
+            selectedTerrainName={selectedTerrain?.name}
             viewport={mapDocument.editor.viewport}
           />
         </section>

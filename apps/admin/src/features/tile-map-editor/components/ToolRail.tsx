@@ -1,4 +1,4 @@
-import { Eraser, Hand, Paintbrush, Pipette } from "lucide-react";
+import { Eraser, Grid3X3, Hand, Paintbrush, Pipette } from "lucide-react";
 import type { EditorTool } from "../canvas/tools/editorTool";
 
 interface ToolRailProps {
@@ -12,6 +12,7 @@ const tools: Array<{
   icon: typeof Paintbrush;
 }> = [
   { tool: "brush", label: "Brush", icon: Paintbrush },
+  { tool: "terrain", label: "Terrain", icon: Grid3X3 },
   { tool: "eraser", label: "Eraser", icon: Eraser },
   { tool: "picker", label: "Picker", icon: Pipette },
   { tool: "pan", label: "Pan", icon: Hand },

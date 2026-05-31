@@ -21,10 +21,11 @@ describe("exportPhaserTiledJson", () => {
     expect(exported.tilewidth).toBe(document.tileSize.width);
     expect(exported.tilesets[0]).toMatchObject({
       firstgid: 1,
-      name: "Studio Basic",
-      tilewidth: 32,
-      tileheight: 32,
+      name: "Kenney Tiny Town",
+      tilewidth: 16,
+      tileheight: 16,
     });
+    expect(exported.tilesets.length).toBeGreaterThan(1);
     expect(exported.layers[0].type).toBe("tilelayer");
     expect(exported.layers[0].data[1 * document.size.columns + 1]).toBe(5);
   });

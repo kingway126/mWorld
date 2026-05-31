@@ -92,6 +92,8 @@ button {
 .option-section,
 .brush-size-pill,
 .option-indicator,
+.terrain-size-control,
+.map-warning-pill,
 .asset-section-title,
 .selected-asset,
 .status-bar {
@@ -290,6 +292,46 @@ button {
   border-right: 1px solid var(--border);
 }
 
+.asset-scroll-region {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.asset-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel-muted);
+}
+
+.asset-mode-tabs button {
+  height: 28px;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.asset-mode-tabs button:hover {
+  background: var(--panel-elevated);
+}
+
+.asset-mode-tabs button[data-active="true"] {
+  color: var(--accent-strong);
+  background: var(--panel-elevated);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
 .inspector-panel {
   border-left: 1px solid var(--border);
 }
@@ -368,6 +410,10 @@ button {
   gap: 8px;
 }
 
+.terrain-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .asset-tile {
   position: relative;
   display: grid;
@@ -407,6 +453,88 @@ button {
   height: 100%;
   border: 1px solid rgba(15, 23, 42, 0.16);
   border-radius: var(--radius-sm);
+}
+
+.terrain-tile-label {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  overflow: hidden;
+  min-height: 16px;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.7);
+  font-size: 9px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terrain-tile[data-active="true"] .terrain-tile-label {
+  background: rgba(49, 46, 129, 0.84);
+}
+
+.tileset-atlas {
+  display: grid;
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.atlas-tile {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: transparent;
+}
+
+.atlas-tile:hover {
+  border-color: var(--accent-border);
+  background: rgba(238, 242, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.42);
+}
+
+.atlas-tile[data-active="true"] {
+  z-index: 1;
+  border-color: var(--accent);
+  background: rgba(79, 70, 229, 0.16);
+  box-shadow:
+    inset 0 0 0 2px rgba(79, 70, 229, 0.78),
+    0 0 0 1px rgba(255, 255, 255, 0.78);
+}
+
+.atlas-tile[data-filtered-out="true"] {
+  cursor: default;
+  opacity: 0.18;
+}
+
+.atlas-tile-id {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: none;
+  min-width: 13px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.74);
+  font-size: 8px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.atlas-tile:hover .atlas-tile-id,
+.atlas-tile[data-active="true"] .atlas-tile-id {
+  display: block;
 }
 
 .asset-tile-id {
@@ -513,6 +641,7 @@ button {
 }
 
 .brush-size-pill {
+  max-width: 128px;
   height: 26px;
   border: 1px solid #3b4659;
   border-radius: var(--radius-sm);
@@ -520,11 +649,42 @@ button {
 }
 
 .brush-size-pill span {
+  overflow: hidden;
   min-width: 58px;
   padding: 0 9px;
   color: var(--text-inverse);
   font-size: 12px;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terrain-size-control {
+  gap: 7px;
+}
+
+.terrain-size-control input {
+  width: 86px;
+  accent-color: #818cf8;
+}
+
+.terrain-size-control strong {
+  min-width: 34px;
+  color: var(--text-inverse);
+  font-size: 12px;
+}
+
+.map-warning-pill {
+  flex: none;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(248, 113, 113, 0.65);
+  border-radius: var(--radius-sm);
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.44);
+  font-size: 11px;
+  font-weight: 740;
 }
 
 .option-toggles {

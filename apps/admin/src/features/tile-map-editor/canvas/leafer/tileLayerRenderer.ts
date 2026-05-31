@@ -1,12 +1,12 @@
 import { Group, Rect } from "leafer-ui";
 import type { TileLayer } from "../../model/layer";
 import type { MapDocument } from "../../model/mapDocument";
-import { findTileByGid } from "../../model/tileset";
+import { findTileByGid, tileSourceRect, type TilesetRef } from "../../model/tileset";
 import type { TileMapLeaferStage } from "./createLeaferStage";
 
 interface RenderedTile {
   gid: number;
-  fill: string;
+  spriteKey: string;
   node: Rect;
 }
 
@@ -26,6 +26,14 @@ interface TileLayerRenderCache {
 }
 
 const stageCaches = new WeakMap<TileMapLeaferStage, TileLayerRenderCache>();
+interface TileSpriteCacheEntry {
+  url?: string;
+  loading: boolean;
+  callbacks: Set<(url: string) => void>;
+}
+
+const sourceImageCache = new Map<string, Promise<HTMLImageElement>>();
+const tileSpriteCache = new Map<string, TileSpriteCacheEntry>();
 
 export function renderTileLayers(stage: TileMapLeaferStage, document: MapDocument) {
   const layoutKey = createLayoutKey(document);
@@ -72,7 +80,14 @@ export function renderTileLayers(stage: TileMapLeaferStage, document: MapDocumen
       forceTileStyleUpdate ||
       previousData.length !== layer.data.length
     ) {
-      didUpdate = syncTileLayer(layerCache, layer, document, forceTileStyleUpdate) || didUpdate;
+      didUpdate =
+        syncTileLayer(
+          layerCache,
+          layer,
+          document,
+          forceTileStyleUpdate,
+          () => stage.leafer.requestRender(true),
+        ) || didUpdate;
     }
   }
 
@@ -112,7 +127,9 @@ function rebuildTileLayers(
     };
 
     stage.tileLayerGroup.add(layerGroup);
-    syncTileLayer(layerCache, layer, document, true);
+    syncTileLayer(layerCache, layer, document, true, () =>
+      stage.leafer.requestRender(true),
+    );
     layers.set(layer.id, layerCache);
   }
 
@@ -129,6 +146,7 @@ function syncTileLayer(
   layer: TileLayer,
   document: MapDocument,
   forceTileStyleUpdate: boolean,
+  requestRender: () => void,
 ) {
   const previousData = layerCache.previousData;
   let didUpdate = false;
@@ -141,7 +159,9 @@ function syncTileLayer(
       continue;
     }
 
-    didUpdate = syncTileAtIndex(layerCache, document, index, gid) || didUpdate;
+    didUpdate =
+      syncTileAtIndex(layerCache, document, index, gid, requestRender) ||
+      didUpdate;
   }
 
   layerCache.previousData = layer.data;
@@ -153,6 +173,7 @@ function syncTileAtIndex(
   document: MapDocument,
   index: number,
   gid: number,
+  requestRender: () => void,
 ) {
   const renderedTile = layerCache.tiles.get(index);
 
@@ -166,16 +187,25 @@ function syncTileAtIndex(
     return false;
   }
 
-  const fill = getTileFill(document, gid);
+  const spriteKey = getSpriteKey(document, gid);
+  const fill = getCachedTileFill(document, gid);
 
   if (renderedTile) {
-    if (renderedTile.gid === gid && renderedTile.fill === fill) {
+    if (renderedTile.gid === gid && renderedTile.spriteKey === spriteKey) {
       return false;
     }
 
-    renderedTile.node.set({ fill });
+    renderedTile.node.set({
+      fill,
+    });
     renderedTile.gid = gid;
-    renderedTile.fill = fill;
+    renderedTile.spriteKey = spriteKey;
+    ensureTileSpriteUrl(document, gid, (url) => {
+      if (renderedTile.gid === gid && renderedTile.spriteKey === spriteKey) {
+        renderedTile.node.set({ fill: createImageFill(url) });
+        requestRender();
+      }
+    });
     return true;
   }
 
@@ -191,18 +221,151 @@ function syncTileAtIndex(
     strokeWidth: 1,
     hittable: false,
   });
+  ensureTileSpriteUrl(document, gid, (url) => {
+    if (node.destroyed) {
+      return;
+    }
+
+    const current = layerCache.tiles.get(index);
+    if (current?.gid === gid && current.spriteKey === spriteKey) {
+      node.set({ fill: createImageFill(url) });
+      requestRender();
+    }
+  });
 
   layerCache.group.add(node);
   layerCache.tiles.set(index, {
     gid,
-    fill,
+    spriteKey,
     node,
   });
   return true;
 }
 
-function getTileFill(document: MapDocument, gid: number) {
-  return findTileByGid(document.tilesets, gid)?.tile.color ?? "#ff4d7d";
+function getCachedTileFill(document: MapDocument, gid: number) {
+  const tileRef = findTileByGid(document.tilesets, gid);
+  if (!tileRef) {
+    return "rgba(0, 0, 0, 0)";
+  }
+
+  const cached = tileSpriteCache.get(tileSpriteKey(tileRef.tileset, tileRef.tile.localId));
+  return cached?.url ? createImageFill(cached.url) : "rgba(0, 0, 0, 0)";
+}
+
+function getSpriteKey(document: MapDocument, gid: number) {
+  const tileRef = findTileByGid(document.tilesets, gid);
+  if (!tileRef) {
+    return `missing:${gid}`;
+  }
+
+  return tileSpriteKey(tileRef.tileset, tileRef.tile.localId);
+}
+
+function ensureTileSpriteUrl(
+  document: MapDocument,
+  gid: number,
+  onReady: (url: string) => void,
+) {
+  const tileRef = findTileByGid(document.tilesets, gid);
+  if (!tileRef) {
+    return;
+  }
+
+  const key = tileSpriteKey(tileRef.tileset, tileRef.tile.localId);
+  const cached = tileSpriteCache.get(key);
+  if (cached?.url) {
+    onReady(cached.url);
+    return;
+  }
+
+  const entry =
+    cached ??
+    {
+      loading: false,
+      callbacks: new Set<(url: string) => void>(),
+    };
+
+  entry.callbacks.add(onReady);
+  tileSpriteCache.set(key, entry);
+
+  if (entry.loading) {
+    return;
+  }
+
+  entry.loading = true;
+  loadSourceImage(tileRef.tileset)
+    .then((image) => {
+      const url = createTileSpriteUrl(tileRef.tileset, tileRef.tile.localId, image);
+      entry.url = url;
+      for (const callback of entry.callbacks) {
+        callback(url);
+      }
+      entry.callbacks.clear();
+    })
+    .catch(() => {
+      entry.callbacks.clear();
+    });
+}
+
+function loadSourceImage(tileset: TilesetRef) {
+  const cached = sourceImageCache.get(tileset.image);
+  if (cached) {
+    return cached;
+  }
+
+  const promise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load tileset ${tileset.image}`));
+    image.src = tileset.image;
+  });
+
+  sourceImageCache.set(tileset.image, promise);
+  return promise;
+}
+
+function createTileSpriteUrl(
+  tileset: TilesetRef,
+  localId: number,
+  image: HTMLImageElement,
+) {
+  const source = tileSourceRect(tileset, localId);
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return "";
+  }
+
+  context.imageSmoothingEnabled = false;
+  context.drawImage(
+    image,
+    source.x,
+    source.y,
+    source.width,
+    source.height,
+    0,
+    0,
+    source.width,
+    source.height,
+  );
+
+  return canvas.toDataURL("image/png");
+}
+
+function createImageFill(url: string) {
+  return {
+    type: "image" as const,
+    url,
+    mode: "stretch" as const,
+  };
+}
+
+function tileSpriteKey(tileset: TilesetRef, localId: number) {
+  return `${tileset.id}:${tileset.image}:${localId}`;
 }
 
 function createLayoutKey(document: MapDocument) {
@@ -226,9 +389,10 @@ function createTilesetKey(document: MapDocument) {
     .map((tileset) =>
       [
         tileset.id,
+        tileset.image,
         tileset.firstGid,
         tileset.tileCount,
-        tileset.tiles.map((tile) => `${tile.localId}:${tile.color}`).join(","),
+        tileset.tiles.map((tile) => tile.localId).join(","),
       ].join("@"),
     )
     .join("|");

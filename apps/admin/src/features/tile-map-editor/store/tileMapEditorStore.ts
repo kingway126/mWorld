@@ -9,6 +9,11 @@ import {
 } from "../commands/historyStack";
 import { paintTile } from "../commands/paintTileCommand";
 import {
+  eraseTerrain,
+  paintTerrain,
+  pickTerrainMaterialAtCell,
+} from "../commands/paintTerrainCommand";
+import {
   createSampleMapDocument,
   type MapDocument,
 } from "../model/mapDocument";
@@ -18,6 +23,8 @@ import { isInsideMap, tileIndex } from "../model/coordinates";
 export interface TileMapEditorState {
   history: HistoryStack<MapDocument>;
   selectedGid: number;
+  selectedTerrainId: string;
+  terrainBrushSize: number;
   activeTool: EditorTool;
   hoverCell?: GridCoordinate;
 }
@@ -25,6 +32,8 @@ export interface TileMapEditorState {
 export type TileMapEditorAction =
   | { type: "select-tool"; tool: EditorTool }
   | { type: "select-gid"; gid: number }
+  | { type: "select-terrain"; terrainId: string }
+  | { type: "set-terrain-brush-size"; size: number }
   | { type: "set-active-layer"; layerId: string }
   | { type: "toggle-layer-visibility"; layerId: string }
   | { type: "toggle-layer-lock"; layerId: string }
@@ -37,10 +46,15 @@ export type TileMapEditorAction =
   | { type: "redo" };
 
 export function createInitialTileMapEditorState(): TileMapEditorState {
+  const document = createSampleMapDocument();
+
   return {
-    history: createHistoryStack(createSampleMapDocument()),
+    history: createHistoryStack(document),
     selectedGid: 1,
-    activeTool: "brush",
+    selectedTerrainId:
+      document.editor.selectedTerrainId ?? document.editor.baseTerrain,
+    terrainBrushSize: document.editor.terrainBrushSize,
+    activeTool: "terrain",
   };
 }
 
@@ -56,6 +70,42 @@ export function tileMapEditorReducer(
 
     case "select-gid":
       return { ...state, selectedGid: action.gid, activeTool: "brush" };
+
+    case "select-terrain":
+      return {
+        ...state,
+        selectedTerrainId: action.terrainId,
+        activeTool: "terrain",
+        history: {
+          ...state.history,
+          present: {
+            ...document,
+            editor: {
+              ...document.editor,
+              selectedTerrainId: action.terrainId,
+            },
+          },
+        },
+      };
+
+    case "set-terrain-brush-size": {
+      const size = Math.max(1, Math.min(8, Math.floor(action.size)));
+
+      return {
+        ...state,
+        terrainBrushSize: size,
+        history: {
+          ...state.history,
+          present: {
+            ...document,
+            editor: {
+              ...document.editor,
+              terrainBrushSize: size,
+            },
+          },
+        },
+      };
+    }
 
     case "set-active-layer":
       return {
@@ -96,6 +146,21 @@ export function tileMapEditorReducer(
       };
 
     case "paint":
+      if (state.activeTool === "terrain") {
+        return {
+          ...state,
+          history: pushHistory(
+            state.history,
+            paintTerrain(
+              document,
+              action.cell,
+              state.selectedTerrainId,
+              state.terrainBrushSize,
+            ),
+          ),
+        };
+      }
+
       return {
         ...state,
         history: pushHistory(
@@ -110,19 +175,52 @@ export function tileMapEditorReducer(
       };
 
     case "erase":
-      return {
-        ...state,
-        history: pushHistory(
-          state.history,
-          eraseTile(document, document.editor.activeLayerId, action.cell),
-        ),
-      };
+      {
+        const terrainErased = eraseTerrain(
+          document,
+          action.cell,
+          state.terrainBrushSize,
+        );
+        const nextDocument = eraseTile(
+          terrainErased,
+          terrainErased.editor.activeLayerId,
+          action.cell,
+        );
+
+        return {
+          ...state,
+          history: pushHistory(state.history, nextDocument),
+        };
+      }
 
     case "pick": {
+      if (!isInsideMap(action.cell, document.size)) {
+        return state;
+      }
+
+      const terrainMaterial = pickTerrainMaterialAtCell(document, action.cell);
+      if (terrainMaterial) {
+        return {
+          ...state,
+          activeTool: "terrain",
+          selectedTerrainId: terrainMaterial.id,
+          history: {
+            ...state.history,
+            present: {
+              ...document,
+              editor: {
+                ...document.editor,
+                selectedTerrainId: terrainMaterial.id,
+              },
+            },
+          },
+        };
+      }
+
       const layer = document.layers.find(
         (candidate) => candidate.id === document.editor.activeLayerId,
       );
-      if (!layer || layer.type !== "tile" || !isInsideMap(action.cell, document.size)) {
+      if (!layer || layer.type !== "tile") {
         return state;
       }
 

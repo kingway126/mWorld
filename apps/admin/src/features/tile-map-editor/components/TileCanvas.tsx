@@ -23,6 +23,8 @@ interface TileCanvasProps {
   mapDocument: MapDocument;
   activeTool: EditorTool;
   selectedGid: number;
+  brushSize: number;
+  selectionFill?: string;
   hoverCell?: GridCoordinate;
   onPaint: (cell: GridCoordinate) => void;
   onErase: (cell: GridCoordinate) => void;
@@ -31,7 +33,7 @@ interface TileCanvasProps {
   onViewportChange: (viewport: ViewportState) => void;
 }
 
-type DragMode = "brush" | "eraser" | "pan";
+type DragMode = "brush" | "terrain" | "eraser" | "pan";
 
 interface DragState {
   mode: DragMode;
@@ -50,6 +52,8 @@ export function TileCanvas({
   mapDocument,
   activeTool,
   selectedGid,
+  brushSize,
+  selectionFill,
   hoverCell,
   onPaint,
   onErase,
@@ -125,12 +129,22 @@ export function TileCanvas({
       return;
     }
 
-    renderSelection(stage, mapDocument, hoverCell, selectedGid);
+    renderSelection(
+      stage,
+      mapDocument,
+      hoverCell,
+      selectedGid,
+      selectionFill,
+      brushSize,
+    );
   }, [
+    brushSize,
     hoverCell,
     mapDocument.size,
     mapDocument.tileSize,
     mapDocument.tilesets,
+    mapDocument.editor.missingTransitionCells,
+    selectionFill,
     selectedGid,
     stageReady,
   ]);
@@ -150,13 +164,16 @@ export function TileCanvas({
       return;
     }
 
-    const applyCellAction = (cell: GridCoordinate, mode: "brush" | "eraser" | "picker") => {
+    const applyCellAction = (
+      cell: GridCoordinate,
+      mode: "brush" | "terrain" | "eraser" | "picker",
+    ) => {
       const currentMap = mapDocumentRef.current;
       if (!isInsideMap(cell, currentMap.size)) {
         return;
       }
 
-      if (mode === "brush") {
+      if (mode === "brush" || mode === "terrain") {
         onPaint(cell);
       } else if (mode === "eraser") {
         onErase(cell);
@@ -207,7 +224,11 @@ export function TileCanvas({
         return;
       }
 
-      if (currentTool === "brush" || currentTool === "eraser") {
+      if (
+        currentTool === "brush" ||
+        currentTool === "terrain" ||
+        currentTool === "eraser"
+      ) {
         applyCellAction(cell, currentTool);
         dragRef.current = {
           mode: currentTool,
